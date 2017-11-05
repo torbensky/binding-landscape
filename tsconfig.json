@@ -1,0 +1,13 @@
+{
+    "compilerOptions": {
+      "sourceMap": true,
+      "jsx": "react",
+      "target": "es5",
+      "module": "commonjs",
+      "moduleResolution": "node",
+      "allowJs": true
+    },
+    "exclude": [
+      "node_modules"
+    ]
+  }
