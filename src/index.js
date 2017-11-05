@@ -2,7 +2,7 @@ import * as d3 from "d3";
 
 // Canvas setup
 const canvasWidth = 960;
-const canvasHeight = 480;
+const canvasHeight = 680;
 
 const svg = d3.select('body')
     .append('svg')
@@ -18,9 +18,16 @@ let margins = {
     right: 50
 };
 
-// Load the data file
+// Process the data file
 var d = require('../data.csv')
-d3.csv(d, (error, data) => {
+function type(d) {
+    return {
+        x: +d['3utr'],
+        y: +d['nrqavg'],
+        mirna: d['mirna']
+    }
+}
+d3.csv(d, type, (error, data) => {
     if (error) {
         console.error(error);
     } else {
@@ -35,18 +42,18 @@ function drawPlot(data){
     
     let plotWidth = canvasWidth - margins.left - margins.right;
     let plotHeight = canvasHeight - margins.top - margins.bottom;    
-    
-    let curveFn = d3.line()
-    .x((d) => {return d.x;})
-    .y((d) => {return d.y;})
-    .curve(d3.curveBasis);
 
     const curveWidth = 40;
 
     // Setup scale
-    let minX = d3.min(data, function(d) { return +d['3utr'] });
-    let maxX = d3.max(data, function(d) { return +d['3utr'] });
-    let maxY = d3.max(data, function(d) { return +d['nrqavg'] });
+    let minX = d3.min(data, d => d.x);
+    let maxX = d3.max(data, d => d.x);
+    let maxY = d3.max(data, d => d.y);
+    // console.log({
+    //     minX: minX,
+    //     maxX: maxX,
+    //     maxY: maxY
+    // })
     let xScale = d3.scaleLinear()
     .domain([0,maxX+40])
     .range([0,plotWidth]);
@@ -55,44 +62,46 @@ function drawPlot(data){
     .domain([0,maxY])
     .range([plotHeight,0]);
 
-    let curvePoints, x, y;
-    for(d of data){
-        // Calculate the points for our 3 point curve shape
-        x = xScale(+d['3utr']);
-        y = yScale(+d['nrqavg']);
-        curvePoints = getCurvePoints(x, y, curveWidth, plotHeight);
-        
-        // Draw the curve using the 3 points
-        plotGroup.append("path")
-        .attr('d', curveFn(curvePoints))
-        .attr("stroke", "purple")
-        .attr("stroke-width", 1.5)
-        .attr("fill", "none");
+    let curveFn = d3.line()
+    .x(d => xScale(d.x))
+    .y(d => yScale(d.y))
+    .curve(d3.curveCardinal);
 
-        // draw axis
-        plotGroup.append("g")
-        .call(d3.axisLeft(yScale))
+    // draw axis
+    plotGroup.append("g")
+    .call(d3.axisLeft(yScale))
 
-        plotGroup.append("g")
-        .attr("transform", "translate(0,"+plotHeight+")")
-        .call(d3.axisBottom(xScale));
+    plotGroup.append("g")
+    .attr("transform", "translate(0,"+plotHeight+")")
+    .call(d3.axisBottom(xScale).ticks(20));
+    
+    // Calculate curve data
+    const getCurvePoints = (x,y,w) => {
+        // console.log({
+        //     scaleX: xScale(x),
+        //     scaleY: yScale(y),
+        //     scale0: yScale(0),
+        // })
+        // console.log({ x, y, w })
+        return [
+            {x: x-w, y: 0},
+            {x: x, y:y},
+            {x: x+w, y:0}
+        ];
     }
-}
+    data = data.map(d => getCurvePoints(d.x, d.y, curveWidth))
+    // console.log(data)
 
-function getCurvePoints(x,y,w,b){
-    if( y < 20){
-        console.log({
-            x: x,
-            y: y,
-            w, w,
-            b: b
-        })
-    }
-    return [
-        new Point(x-w,b),
-        new Point(x,b-y),
-        new Point(x+w,b)
-    ];
+    // draw curves
+    let curveGroup = plotGroup.append("g");
+    let curves = curveGroup.selectAll('path').data(data);
+    curves.enter().append("path")
+    .attr("stroke", "blue")
+    .attr("stroke-width", 2)
+    .attr("fill", "none")
+    .attr('d', d => curveFn(d));
+
+    curves.exit().remove();
 }
 
 
