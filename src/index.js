@@ -68,23 +68,25 @@ function drawPlot(data){
     
     plotGroup.append("g")
     .attr("transform", "translate(0,"+plotHeight+")")
-    .call(d3.axisBottom(xScale).ticks(20));
+    .call(d3.axisBottom(xScale));
     
     // Calculate curve data
-    const getCurvePoints = (x,y,w) => {
+    const getCurves = (d,w,) => {
         // console.log({
             //     scaleX: xScale(x),
             //     scaleY: yScale(y),
             //     scale0: yScale(0),
             // })
             // console.log({ x, y, w })
-            return [
-                {x: x-w, y: 0},
-                {x: x, y:y},
-                {x: x+w, y:0}
-        ];
+            return {
+                points: [
+                {x: d.x-w, y: 0},
+                {x: d.x, y:d.y},
+                {x: d.x+w, y:0}],
+                mirna: d.mirna,
+            };
     }
-    data = data.map(d => getCurvePoints(d.x, d.y, curveWidth))
+    data = data.map(d => getCurves(d, curveWidth))
     // console.log(data)
     
     // draw curves
@@ -92,13 +94,16 @@ function drawPlot(data){
     .x(d => xScale(d.x))
     .y(d => yScale(d.y))
     .curve(d3.curveCardinal);
-    let colorFn = d3.scaleOrdinal().range(d3.schemeCategory20c)
+    console.log(data.map(d => d.mirna))
+    let colorFn = d3.scaleOrdinal()
+    .domain(data.map(d => d.mirna))
+    .range(['#493829','#816c5b','#613318','#404f24','#668d3c'])
     let curveGroup = plotGroup.append("g");
     let curves = curveGroup.selectAll('path').data(data);
     curves.enter().append("path")
     .attr("fill", d => colorFn(d.mirna))
     .attr("fill-opacity", "0.3")
-    .attr('d', curveFn);
+    .attr('d', d => curveFn(d.points));
 
     curves.exit().remove();
 }
